@@ -4,7 +4,11 @@ const express = require("express");
 const mongoose = require("mongoose");
 const multer = require("multer");
 const bodyParser = require("body-parser");
+const { createHandler } = require("graphql-http/lib/use/express");
 require("@dotenvx/dotenvx").config();
+
+const graphqlSchema = require("./graphql/schema");
+const graphqlResolver = require("./graphql/resolvers");
 
 const connectionUrl = process.env.NODE_MONGO_CONNECTION_URL;
 
@@ -35,14 +39,34 @@ app.use(multer({ storage: fileStorage, fileFilter }).single("image"));
 app.use("/images", express.static(path.join(__dirname, "images")));
 
 app.use((req, res, next) => {
+  res.setHeader("Accept", "application/json");
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader(
     "Access-Control-Allow-Methods",
     "OPTIONS, GET, POST, PUT, PATCH, DELETE"
   );
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
   next();
 });
+
+app.all(
+  "/graphql",
+  createHandler({
+    schema: graphqlSchema,
+    rootValue: graphqlResolver,
+    formatError(err) {
+      const { originalError, message = "An error occured." } = err;
+      if (!originalError) {
+        return err;
+      }
+      const { data, code = 500 } = originalError;
+      return { message, status: code, data };
+    },
+  })
+);
 
 app.use((error, req, res, next) => {
   console.log(error);
@@ -53,7 +77,7 @@ app.use((error, req, res, next) => {
 mongoose
   .connect(connectionUrl)
   .then((result) => {
-    httpServer.listen(8080);
+    app.listen(8080);
     console.log("MONGODB_CONNECTED");
   })
   .catch((err) => console.log("CONNECTION_ERR", err));
