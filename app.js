@@ -1,14 +1,18 @@
 const path = require("path");
-const { v4: uuidv4 } = require("uuid");
+const multer = require("multer");
 const express = require("express");
 const mongoose = require("mongoose");
-const multer = require("multer");
+const { v4: uuidv4 } = require("uuid");
+var { ruruHTML } = require("ruru/server")
 const bodyParser = require("body-parser");
 const { createHandler } = require("graphql-http/lib/use/express");
+const { applyMiddleware } = require("graphql-middleware");
 require("@dotenvx/dotenvx").config();
 
 const graphqlSchema = require("./graphql/schema");
 const graphqlResolver = require("./graphql/resolvers");
+const { graphqlContext } = require("./context/graphql");
+const { permissions } = require("./middleware/permissions");
 
 const connectionUrl = process.env.NODE_MONGO_CONNECTION_URL;
 
@@ -31,10 +35,18 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+const schema = applyMiddleware(graphqlSchema, permissions);
+
 const app = express();
 
-// app.use(bodyParser.urlencoded()); // x-www-form-urlencoded <form>
-app.use(bodyParser.json()); // application/json
+// remove in prod mode
+app.get("/ruru", (_req, res) => {
+  res.type("html")
+  res.end(ruruHTML({ endpoint: "/graphql" }))
+})
+
+
+app.use(bodyParser.json());
 app.use(multer({ storage: fileStorage, fileFilter }).single("image"));
 app.use("/images", express.static(path.join(__dirname, "images")));
 
@@ -52,12 +64,13 @@ app.use((req, res, next) => {
   next();
 });
 
-app.all(
-  "/graphql",
+app.all("/graphql", (...args) =>
   createHandler({
-    schema: graphqlSchema,
+    schema,
     rootValue: graphqlResolver,
+    context: graphqlContext(...args),
     formatError(err) {
+      console.log("FORMAT_ERR", err);
       const { originalError, message = "An error occured." } = err;
       if (!originalError) {
         return err;
@@ -65,7 +78,7 @@ app.all(
       const { data, code = 500 } = originalError;
       return { message, status: code, data };
     },
-  })
+  })(...args)
 );
 
 app.use((error, req, res, next) => {

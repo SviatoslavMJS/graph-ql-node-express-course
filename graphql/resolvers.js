@@ -4,6 +4,7 @@ const { isEmail, isEmpty, isLength } = require("validator");
 require("@dotenvx/dotenvx").config();
 
 const User = require("../models/user");
+const Post = require("../models/post");
 
 const jwtSecretKey = process.env.JSON_WEB_TOKEN_SECRET_KEY;
 
@@ -70,5 +71,38 @@ module.exports = {
       token,
       userId: user._id.toString(),
     };
+  },
+
+  createPost: async function ({ postInput }, args, ctx, info) {
+    const errors = [];
+    const { title, content, imageUrl } = postInput;
+
+    if (isEmpty(title) || !isLength(title, { min: 5 })) {
+      errors.push({ message: "Title is too short." });
+    }
+    if (isEmpty(content) || !isLength(content, { min: 5 })) {
+      errors.push({ message: "Content is too short." });
+    }
+
+    if (errors.length > 0) {
+      const error = new Error("Invalid input");
+      error.data = errors;
+      error.code = 422;
+      throw error;
+    }
+
+    const user = await User.findById(args.userId, "name _id email posts");
+    if (!user) {
+      const error = new Error("Invalid user.");
+      error.code = 401;
+      throw error;
+    }
+
+    const post = new Post({ title, content, imageUrl, creator: user });
+    const createdPost = await post.save();
+    user.posts.push(createdPost);
+    await user.save();
+
+    return { ...createdPost._doc, _id: createdPost._id.toString() };
   },
 };

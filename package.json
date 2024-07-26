@@ -22,9 +22,12 @@
     "graphql": "^16.9.0",
     "graphql-express": "^3.0.0",
     "graphql-http": "^1.22.1",
+    "graphql-middleware": "^6.1.35",
+    "graphql-shield": "^7.6.5",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.5.1",
     "multer": "^1.4.5-lts.1",
+    "ruru": "^2.0.0-beta.13",
     "uuid": "^10.0.0",
     "validator": "^13.12.0"
   },
