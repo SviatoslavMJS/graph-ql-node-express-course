@@ -3,7 +3,7 @@ const multer = require("multer");
 const express = require("express");
 const mongoose = require("mongoose");
 const { v4: uuidv4 } = require("uuid");
-var { ruruHTML } = require("ruru/server")
+var { ruruHTML } = require("ruru/server");
 const bodyParser = require("body-parser");
 const { createHandler } = require("graphql-http/lib/use/express");
 const { applyMiddleware } = require("graphql-middleware");
@@ -41,10 +41,9 @@ const app = express();
 
 // remove in prod mode
 app.get("/ruru", (_req, res) => {
-  res.type("html")
-  res.end(ruruHTML({ endpoint: "/graphql" }))
-})
-
+  res.type("html");
+  res.end(ruruHTML({ endpoint: "/graphql" }));
+});
 
 app.use(bodyParser.json());
 app.use(multer({ storage: fileStorage, fileFilter }).single("image"));
@@ -64,13 +63,13 @@ app.use((req, res, next) => {
   next();
 });
 
-app.all("/graphql", (...args) =>
+app.all(
+  "/graphql",
   createHandler({
     schema,
     rootValue: graphqlResolver,
-    context: graphqlContext(...args),
+    context: (req) =>  graphqlContext(req),
     formatError(err) {
-      console.log("FORMAT_ERR", err);
       const { originalError, message = "An error occured." } = err;
       if (!originalError) {
         return err;
@@ -78,7 +77,7 @@ app.all("/graphql", (...args) =>
       const { data, code = 500 } = originalError;
       return { message, status: code, data };
     },
-  })(...args)
+  })
 );
 
 app.use((error, req, res, next) => {

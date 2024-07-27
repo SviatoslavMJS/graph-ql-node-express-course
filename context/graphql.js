@@ -1,5 +1,10 @@
 const { decodeToken } = require("../utils/token");
 
-module.exports.graphqlContext = (req, ...args) => {
-  return { ...decodeToken(req.get("Authorization")), params: req.params };
+module.exports.graphqlContext = (req) => {
+  const decoded = decodeToken(req.raw.get("Authorization"));
+  return {
+    ...decoded,
+    query: req.raw.query,
+    params: req.raw.params,
+  };
 };

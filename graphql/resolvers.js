@@ -6,6 +6,7 @@ require("@dotenvx/dotenvx").config();
 const User = require("../models/user");
 const Post = require("../models/post");
 
+const perPage = 2;
 const jwtSecretKey = process.env.JSON_WEB_TOKEN_SECRET_KEY;
 
 module.exports = {
@@ -104,5 +105,29 @@ module.exports = {
     await user.save();
 
     return { ...createdPost._doc, _id: createdPost._id.toString() };
+  },
+
+  posts: async ({ page = 1 }, args, ctx, info) => {
+    const totalCount = await Post.find().countDocuments();
+    const posts = await Post.find()
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * perPage)
+      .limit(perPage)
+      .populate("creator");
+
+    return {
+      posts: posts.map(
+        ({ _id, createdAt, updatedAt, title, content, imageUrl, creator }) => ({
+          title,
+          content,
+          creator,
+          imageUrl,
+          _id: _id.toString(),
+          createdAt: createdAt.toISOString(),
+          updatedAt: updatedAt.toISOString(),
+        })
+      ),
+      totalCount,
+    };
   },
 };
