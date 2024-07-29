@@ -99,12 +99,23 @@ module.exports = {
       throw error;
     }
 
-    const post = new Post({ title, content, imageUrl, creator: user });
+    const post = new Post({
+      title,
+      content,
+      imageUrl: decodeURI(imageUrl),
+      creator: user,
+    });
     const createdPost = await post.save();
     user.posts.push(createdPost);
     await user.save();
 
-    return { ...createdPost._doc, _id: createdPost._id.toString() };
+    return {
+      ...createdPost._doc,
+      _id: createdPost._id.toString(),
+      createdAt: createdPost.createdAt.toISOString(),
+      updatedAt: createdPost.updatedAt.toISOString(),
+      creator: user,
+    };
   },
 
   posts: async ({ page = 1 }, args, ctx, info) => {
@@ -113,7 +124,7 @@ module.exports = {
       .sort({ createdAt: -1 })
       .skip((page - 1) * perPage)
       .limit(perPage)
-      .populate("creator");
+      .populate("creator", 'name _id email createdAt');
 
     return {
       posts: posts.map(
@@ -128,6 +139,70 @@ module.exports = {
         })
       ),
       totalCount,
+    };
+  },
+
+  postDetails: async ({ postId }, args, ctx, info) => {
+    console.log("PPP", postId);
+    const { _id, title, content, creator, createdAt, updatedAt, imageUrl } =
+      (await Post.findOne({ _id: postId }).populate("creator", 'name _id email createdAt')) ?? {};
+
+    return {
+      title,
+      content,
+      creator,
+      imageUrl,
+      _id: _id.toString(),
+      createdAt: createdAt.toISOString(),
+      updatedAt: updatedAt.toISOString(),
+    };
+  },
+
+  updatePost: async function ({ postInput }, args, ctx, info) {
+    const errors = [];
+    const { _id, title, content, imageUrl } = postInput;
+
+    if (isEmpty(title) || !isLength(title, { min: 5 })) {
+      errors.push({ message: "Title is too short." });
+    }
+    if (isEmpty(content) || !isLength(content, { min: 5 })) {
+      errors.push({ message: "Content is too short." });
+    }
+
+    if (errors.length > 0) {
+      const error = new Error("Invalid input");
+      error.data = errors;
+      error.code = 422;
+      throw error;
+    }
+
+    const post = await Post.findById(_id).populate("creator", 'name _id email createdAt');
+    if (!post) {
+      const error = new Error("Post not found.");
+      error.data = errors;
+      error.code = 404;
+      throw error;
+    }
+    if (post.creator._id.toString() !== args.userId) {
+      const error = new Error("Not allowed to update.");
+      error.data = errors;
+      error.code = 401;
+      throw error;
+    }
+    const decodedImageUrl = decodeURI(imageUrl);
+    const updatedPost = await Post.findByIdAndUpdate(
+      { _id },
+      { title, content, imageUrl: decodedImageUrl },
+      {
+        returnDocument: "after",
+      }
+    ).populate("creator", 'name _id email createdAt');
+
+    return {
+      ...updatedPost._doc,
+      _id: updatedPost._id.toString(),
+      createdAt: updatedPost.createdAt.toISOString(),
+      updatedAt: updatedPost.updatedAt.toISOString(),
     };
   },
 };

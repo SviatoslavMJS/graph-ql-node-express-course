@@ -1,3 +1,4 @@
+const fs = require("fs");
 const path = require("path");
 const multer = require("multer");
 const express = require("express");
@@ -18,8 +19,10 @@ const connectionUrl = process.env.NODE_MONGO_CONNECTION_URL;
 
 const fileStorage = multer.diskStorage({
   destination: "images",
-  filename: function (req, { filename, originalname }, cb) {
-    cb(null, `${uuidv4()}-${originalname ?? ""}`);
+  filename: function (req, file, cb) {
+    const { filename, originalname, mimetype } = file ?? {};
+    const [, type] = mimetype.split("/");
+    cb(null, `img_${Date.now()}.${type || "jpg"}`);
   },
 });
 
@@ -33,6 +36,16 @@ const fileFilter = (req, file, cb) => {
   } else {
     cd(null, false);
   }
+};
+
+const clearImage = (imageUrl) => {
+  fs.unlink(path.join(__dirname, imageUrl), (err) =>
+    console.log(
+      err
+        ? err + "FS_CLEAR_IMAGE_FAILED"
+        : "FS_IMAGE_SUCCESSFULY_REMOVED - " + imageUrl
+    )
+  );
 };
 
 const schema = applyMiddleware(graphqlSchema, permissions);
@@ -63,12 +76,26 @@ app.use((req, res, next) => {
   next();
 });
 
-app.all(
+app.put("/post-image", (req, res, next) => {
+  if (!req.file) {
+    return res.status(422).json({ message: "No file provided." });
+  }
+  if (req.body.oldPath) {
+    clearImage(req.body.oldPath);
+  }
+
+  return res.status(201).json({
+    message: "Success.",
+    filePath: req.file.path.replaceAll("//", "/"),
+  });
+});
+
+app.use(
   "/graphql",
   createHandler({
     schema,
     rootValue: graphqlResolver,
-    context: (req) =>  graphqlContext(req),
+    context: (req) => graphqlContext(req),
     formatError(err) {
       const { originalError, message = "An error occured." } = err;
       if (!originalError) {

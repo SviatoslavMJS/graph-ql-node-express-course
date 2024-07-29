@@ -42,14 +42,23 @@ module.exports = buildSchema(`
     imageUrl: String!
   }
 
+   input UpdatePostInputData {
+    _id: ID!
+    title: String!
+    content: String!
+    imageUrl: String!
+  }
+
   type Query {
     posts(page: Int): PostsData!
+    postDetails(postId: String): Post!
     login(email: String!, password: String!): AuthData!
   }
 
   type Mutation {
     createUser(userInput: UserInputData): User!
     createPost(postInput: PostInputData): Post!
+    updatePost(postInput:  UpdatePostInputData): Post!
   }
 
   schema {
