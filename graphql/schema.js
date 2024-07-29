@@ -56,6 +56,7 @@ module.exports = buildSchema(`
   }
 
   type Mutation {
+    deletePost(postId: String!): Post!
     createUser(userInput: UserInputData): User!
     createPost(postInput: PostInputData): Post!
     updatePost(postInput:  UpdatePostInputData): Post!

@@ -10,6 +10,8 @@ const { createHandler } = require("graphql-http/lib/use/express");
 const { applyMiddleware } = require("graphql-middleware");
 require("@dotenvx/dotenvx").config();
 
+const { clearImage } = require("./utils/clear-image");
+
 const graphqlSchema = require("./graphql/schema");
 const graphqlResolver = require("./graphql/resolvers");
 const { graphqlContext } = require("./context/graphql");
@@ -36,16 +38,6 @@ const fileFilter = (req, file, cb) => {
   } else {
     cd(null, false);
   }
-};
-
-const clearImage = (imageUrl) => {
-  fs.unlink(path.join(__dirname, imageUrl), (err) =>
-    console.log(
-      err
-        ? err + "FS_CLEAR_IMAGE_FAILED"
-        : "FS_IMAGE_SUCCESSFULY_REMOVED - " + imageUrl
-    )
-  );
 };
 
 const schema = applyMiddleware(graphqlSchema, permissions);

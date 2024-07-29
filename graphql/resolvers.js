@@ -5,6 +5,7 @@ require("@dotenvx/dotenvx").config();
 
 const User = require("../models/user");
 const Post = require("../models/post");
+const { clearImage } = require("../utils/clear-image");
 
 const perPage = 2;
 const jwtSecretKey = process.env.JSON_WEB_TOKEN_SECRET_KEY;
@@ -124,7 +125,7 @@ module.exports = {
       .sort({ createdAt: -1 })
       .skip((page - 1) * perPage)
       .limit(perPage)
-      .populate("creator", 'name _id email createdAt');
+      .populate("creator", "name _id email createdAt");
 
     return {
       posts: posts.map(
@@ -145,7 +146,10 @@ module.exports = {
   postDetails: async ({ postId }, args, ctx, info) => {
     console.log("PPP", postId);
     const { _id, title, content, creator, createdAt, updatedAt, imageUrl } =
-      (await Post.findOne({ _id: postId }).populate("creator", 'name _id email createdAt')) ?? {};
+      (await Post.findOne({ _id: postId }).populate(
+        "creator",
+        "name _id email createdAt"
+      )) ?? {};
 
     return {
       title,
@@ -176,7 +180,10 @@ module.exports = {
       throw error;
     }
 
-    const post = await Post.findById(_id).populate("creator", 'name _id email createdAt');
+    const post = await Post.findById(_id).populate(
+      "creator",
+      "name _id email createdAt"
+    );
     if (!post) {
       const error = new Error("Post not found.");
       error.data = errors;
@@ -196,13 +203,42 @@ module.exports = {
       {
         returnDocument: "after",
       }
-    ).populate("creator", 'name _id email createdAt');
+    ).populate("creator", "name _id email createdAt");
 
     return {
       ...updatedPost._doc,
       _id: updatedPost._id.toString(),
       createdAt: updatedPost.createdAt.toISOString(),
       updatedAt: updatedPost.updatedAt.toISOString(),
+    };
+  },
+
+  deletePost: async function ({ postId }, args, ctx, info) {
+    const post = await Post.findById(postId);
+
+    if (!post) {
+      const error = new Error("Post not found.");
+      error.code = 404;
+      throw error;
+    }
+
+    const user = await User.findById(post.creator.toString());
+    if (!user || user._id.toString() !== args.userId) {
+      const error = new Error("Not allowed to update.");
+      error.code = 401;
+      throw error;
+    }
+
+    await Post.findByIdAndDelete(postId);
+    user.posts = user.posts.filter((id) => id.toString() !== postId);
+    await user.save();
+    clearImage(post.imageUrl);
+
+    return {
+      ...post._doc,
+      _id: post._id.toString(),
+      createdAt: post.createdAt.toISOString(),
+      updatedAt: post.updatedAt.toISOString(),
     };
   },
 };
