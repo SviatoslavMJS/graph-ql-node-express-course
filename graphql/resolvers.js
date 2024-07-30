@@ -196,8 +196,7 @@ module.exports = {
       error.code = 401;
       throw error;
     }
-    // const decodedImageUrl = decodeURI(imageUrl);
-    const decodedImageUrl = imageUrl;
+    const decodedImageUrl = decodeURI(imageUrl);
     const updatedPost = await Post.findByIdAndUpdate(
       { _id },
       { title, content, imageUrl: decodedImageUrl },

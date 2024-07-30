@@ -1,0 +1,7 @@
+1. Install OpenSSL into operational system: [OenSSL](https://slproweb.com/products/Win32OpenSSL.html)
+
+2. Run command in Git Bush:  `openssl req -nodes -new -x509 -keyout server.key -out server.cert` and follow the instructions
+
+3. Run command in terminal: `npm install`
+
+4. Run Run command in terminal `npm run start`
