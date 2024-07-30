@@ -196,7 +196,8 @@ module.exports = {
       error.code = 401;
       throw error;
     }
-    const decodedImageUrl = decodeURI(imageUrl);
+    // const decodedImageUrl = decodeURI(imageUrl);
+    const decodedImageUrl = imageUrl;
     const updatedPost = await Post.findByIdAndUpdate(
       { _id },
       { title, content, imageUrl: decodedImageUrl },
@@ -230,7 +231,7 @@ module.exports = {
     }
 
     await Post.findByIdAndDelete(postId);
-    user.posts = user.posts.filter((id) => id.toString() !== postId);
+    user.posts.pull(postId);
     await user.save();
     clearImage(post.imageUrl);
 
@@ -239,6 +240,72 @@ module.exports = {
       _id: post._id.toString(),
       createdAt: post.createdAt.toISOString(),
       updatedAt: post.updatedAt.toISOString(),
+    };
+  },
+
+  userStatus: async function (parent, args, ctx, info) {
+    if (!args.userId) {
+      const error = new Error("Not authorized.");
+      error.code = 401;
+      throw error;
+    }
+
+    const user = await User.findById(args.userId);
+    if (!user) {
+      const error = new Error("Not found.");
+      error.code = 404;
+      throw error;
+    }
+
+    const { _id, name, email, status: newStatus, posts } = user._doc;
+
+    return {
+      name,
+      email,
+      posts,
+      status: newStatus,
+      _id: _id.toString(),
+    };
+  },
+
+  updateUserStatus: async function ({ status }, args, ctx, info) {
+    if (!args.userId) {
+      const error = new Error("Not authorized.");
+      error.code = 401;
+      throw error;
+    }
+
+    if (isEmpty(status) || !isLength(status, { min: 2 })) {
+      const error = new Error("Min 2 characrers required.");
+      error.code = 422;
+      throw error;
+    }
+
+    const user = await User.findById(args.userId);
+    if (!user) {
+      const error = new Error("Not found.");
+      error.code = 404;
+      throw error;
+    } else if (user._id.toString() !== args.userId) {
+      const error = new Error("Not authorized.");
+      error.code = 401;
+      throw error;
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      args.userId,
+      { status },
+      { returnDocument: "after" }
+    );
+
+    const { _id, name, email, posts, status: newStatus } = updatedUser._doc;
+
+    return {
+      name,
+      email,
+      posts,
+      status: newStatus,
+      _id: _id.toString(),
     };
   },
 };

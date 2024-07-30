@@ -10,12 +10,14 @@ const isAuthenticated = rule({ cache: "contextual" })(
 module.exports.permissions = shield(
   {
     Query: {
-      // login: allowAll,
       posts: isAuthenticated,
+      userStatus: isAuthenticated,
     },
     Mutation: {
-      // createUser: allowAll,
+      deletePost: isAuthenticated,
+      updatePost: isAuthenticated,
       createPost: isAuthenticated,
+      updateUserStatus: isAuthenticated,
     },
   },
   { allowExternalErrors: true }
