@@ -1,9 +1,9 @@
-const jwt = require("jsonwebtoken");
+const jwt = require("jsonwebtoken")!;
 require("@dotenvx/dotenvx").config();
 
 const jwtSecretKey = process.env.JSON_WEB_TOKEN_SECRET_KEY;
 
-module.exports.decodeToken = (reqToken) => {
+module.exports.decodeToken = (reqToken: string | undefined) => {
   const result = { isAuth: false, userId: null };
   try {
     if (!reqToken) {
